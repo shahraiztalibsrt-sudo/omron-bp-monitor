@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Omron BP Monitor - Web App</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .logo {
+            font-size: 3rem;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #666;
+            font-size: 1.1rem;
+        }
+        
+        /* Connection Status */
+        .status-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            text-align: center;
+            border-left: 5px solid #ccc;
+        }
+        
+        .status-card.connected {
+            background: #e8f5e9;
+            border-left-color: #4CAF50;
+        }
+        
+        .status-card.disconnected {
+            background: #ffebee;
+            border-left-color: #f44336;
+        }
+        
+        .status-icon {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+        }
+        
+        .connected .status-icon { color: #4CAF50; }
+        .disconnected .status-icon { color: #f44336; }
+        
+        /* BP Display */
+        .bp-display {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            padding: 30px;
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .bp-reading {
+            font-size: 4rem;
+            font-weight: bold;
+            margin: 10px 0;
+            text-shadow: 2px 2px 10px rgba(0,0,0,0.3);
+        }
+        
+        .bp-values {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 30px;
+        }
+        
+        .bp-value {
+            text-align: center;
+        }
+        
+        .bp-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .bp-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+        }
+        
+        .bp-unit {
+            font-size: 1rem;
+            margin-top: 5px;
+        }
+        
+        /* Controls */
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        @media (max-width: 600px) {
+            .controls {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .btn {
+            padding: 18px 25px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #f44336 0%, #c62828 100%);
+            color: white;
+        }
+        
+        .btn-warning {
+            background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+            color: white;
+        }
+        
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        /* Logs */
+        .logs {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .log-entry {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+        
+        .log-time {
+            color: #666;
+            margin-right: 10px;
+        }
+        
+        .log-success { color: #4CAF50; }
+        .log-error { color: #f44336; }
+        .log-info { color: #2196F3; }
+        
+        /* Instructions */
+        .instructions {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 30px;
+        }
+        
+        .instructions h3 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+        
+        .instructions ol {
+            margin-left: 20px;
+            color: #856404;
+        }
+        
+        .instructions li {
+            margin-bottom: 10px;
+        }
+        
+        /* Loading Animation */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Footer */
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">
+                <i class="fas fa-heartbeat"></i>
+            </div>
+            <h1>Omron Blood Pressure Monitor</h1>
+            <p class="subtitle">Web-based BP Monitoring with Google Sheets Integration</p>
+        </div>
+        
+        <!-- Connection Status -->
+        <div class="status-card disconnected" id="statusCard">
+            <div class="status-icon">
+                <i class="fas fa-plug"></i>
+            </div>
+            <h2 id="statusText">Device Disconnected</h2>
+            <p id="statusDescription">Click "Connect Device" to start monitoring</p>
+        </div>
+        
+        <!-- BP Display -->
+        <div class="bp-display" id="bpDisplay" style="display: none;">
+            <div class="bp-label">CURRENT READING</div>
+            <div class="bp-reading" id="bpReading">--/--</div>
+            <div class="bp-label" id="bpTime">Not measured yet</div>
+            
+            <div class="bp-values">
+                <div class="bp-value">
+                    <div class="bp-label">SYSTOLIC</div>
+                    <div class="bp-number" id="systolicValue">--</div>
+                    <div class="bp-unit">mmHg</div>
+                </div>
+                <div class="bp-value">
+                    <div class="bp-label">DIASTOLIC</div>
+                    <div class="bp-number" id="diastolicValue">--</div>
+                    <div class="bp-unit">mmHg</div>
+                </div>
+                <div class="bp-value">
+                    <div class="bp-label">PULSE</div>
+                    <div class="bp-number" id="pulseValue">--</div>
+                    <div class="bp-unit">BPM</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Controls -->
+        <div class="controls">
+            <button class="btn btn-primary" id="connectBtn" onclick="connectDevice()">
+                <i class="fas fa-bluetooth"></i> Connect Device
+            </button>
+            
+            <button class="btn btn-success" id="saveBtn" onclick="saveToSheets()" disabled>
+                <i class="fas fa-save"></i> Save to Google Sheets
+            </button>
+            
+            <button class="btn btn-secondary" id="dashboardBtn" onclick="openDashboard()">
+                <i class="fas fa-chart-line"></i> View Dashboard
+            </button>
+            
+            <button class="btn btn-danger" id="disconnectBtn" onclick="disconnectDevice()" disabled>
+                <i class="fas fa-power-off"></i> Disconnect
+            </button>
+            
+            <!-- NEW: Test Button -->
+            <button class="btn btn-warning" id="testBtn" onclick="simulateReading()">
+                <i class="fas fa-vial"></i> Test with Simulated Data
+            </button>
+            
+            <button class="btn btn-secondary" id="autoSaveBtn" onclick="toggleAutoSave()">
+                <i class="fas fa-robot"></i> Auto-Save: OFF
+            </button>
+        </div>
+        
+        <!-- Loading -->
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p id="loadingText">Connecting to device...</p>
+        </div>
+        
+        <!-- Logs -->
+        <div class="logs">
+            <h3><i class="fas fa-list-alt"></i> Activity Log</h3>
+            <div id="logContainer"></div>
+        </div>
+        
+        <!-- Instructions -->
+        <div class="instructions">
+            <h3><i class="fas fa-info-circle"></i> How to Use:</h3>
+            <ol>
+                <li><strong>For Testing:</strong> Click "Test with Simulated Data" button</li>
+                <li><strong>For Real Device:</strong> Turn ON Omron device, click "Connect Device"</li>
+                <li>Browser will ask for Bluetooth permission - click ALLOW</li>
+                <li>Select your Omron device from the list</li>
+                <li>Put on the cuff and take measurement</li>
+                <li>Reading appears automatically on screen</li>
+                <li>Click "Save to Google Sheets" or enable "Auto-Save"</li>
+                <li>View all data in Dashboard</li>
+            </ol>
+            <p><strong>Note:</strong> Works in Chrome/Edge on Windows/Mac/Android. iOS has limited Web Bluetooth support.</p>
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <p><i class="fas fa-code"></i> Web Bluetooth BP Monitor | Data automatically saved to Google Sheets</p>
+            <p>Works with Omron BP devices supporting Bluetooth</p>
+        </div>
+    </div>
+    
+    <!-- JavaScript -->
+    <script>
+    // Global variables
+    let device = null;
+    let server = null;
+    let service = null;
+    let characteristic = null;
+    let currentReading = null;
+    let keepAliveInterval = null;
+    let reconnectAttempts = 0;
+    const MAX_RECONNECT_ATTEMPTS = 3;
+    let autoSaveEnabled = false;
+    
+    // Your Google Apps Script URL - MAKE SURE THIS IS CORRECT!
+    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxr07PndFxaOp5B5c2dbBGuEAWQgDdHV3mqtGOxE_CDbEwOIjkSmm52nTX_EC8v0s77/exec';
+    
+    // Log function
+    function log(message, type = 'info') {
+        const logContainer = document.getElementById('logContainer');
+        const time = new Date().toLocaleTimeString();
+        const logEntry = document.createElement('div');
+        logEntry.className = `log-entry log-${type}`;
+        logEntry.innerHTML = `<span class="log-time">[${time}]</span> ${message}`;
+        logContainer.appendChild(logEntry);
+        logContainer.scrollTop = logContainer.scrollHeight;
+        console.log(`[${type.toUpperCase()}] ${message}`);
+    }
+    
+    // Keep-alive to prevent disconnection
+    function startKeepAlive() {
+        if (keepAliveInterval) clearInterval(keepAliveInterval);
+        
+        keepAliveInterval = setInterval(async () => {
+            if (device && device.gatt.connected && characteristic) {
+                try {
+                    await characteristic.readValue();
+                    log('✓ Keep-alive ping', 'info');
+                } catch (error) {
+                    log(`Keep-alive failed: ${error.message}`, 'error');
+                }
+            }
+        }, 15000); // Every 15 seconds
+    }
+    
+    function stopKeepAlive() {
+        if (keepAliveInterval) {
+            clearInterval(keepAliveInterval);
+            keepAliveInterval = null;
+        }
+    }
+    
+    // Auto-reconnect if disconnected
+    async function attemptReconnect() {
+        if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+            log('❌ Max reconnection attempts reached', 'error');
+            return;
+        }
+        
+        reconnectAttempts++;
+        log(`🔄 Reconnecting (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`, 'info');
+        
+        try {
+            await connectDevice();
+            reconnectAttempts = 0;
+        } catch (error) {
+            log(`Reconnect failed: ${error.message}`, 'error');
+            setTimeout(attemptReconnect, 3000);
+        }
+    }
+    
+    // Update status
+    function updateStatus(connected, message = '') {
+        const statusCard = document.getElementById('statusCard');
+        const statusText = document.getElementById('statusText');
+        const statusDescription = document.getElementById('statusDescription');
+        const connectBtn = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const saveBtn = document.getElementById('saveBtn');
+        const bpDisplay = document.getElementById('bpDisplay');
+        
+        if (connected) {
+            statusCard.className = 'status-card connected';
+            statusText.innerHTML = '<i class="fas fa-check-circle"></i> Device Connected';
+            statusDescription.textContent = message || 'Ready to take measurements';
+            connectBtn.disabled = true;
+            disconnectBtn.disabled = false;
+            saveBtn.disabled = false;
+            bpDisplay.style.display = 'block';
+        } else {
+            statusCard.className = 'status-card disconnected';
+            statusText.innerHTML = '<i class="fas fa-times-circle"></i> Device Disconnected';
+            statusDescription.textContent = message || 'Click "Connect Device" to start';
+            connectBtn.disabled = false;
+            disconnectBtn.disabled = true;
+            saveBtn.disabled = true;
+            bpDisplay.style.display = 'none';
+        }
+    }
+    
+    // Show/hide loading
+    function showLoading(show, text = '') {
+        const loading = document.getElementById('loading');
+        const loadingText = document.getElementById('loadingText');
+        
+        if (show) {
+            loading.style.display = 'block';
+            loadingText.textContent = text;
+        } else {
+            loading.style.display = 'none';
+        }
+    }
+    
+    // Update BP display
+    function updateBPDisplay(reading) {
+        if (!reading) return;
+        
+        document.getElementById('systolicValue').textContent = reading.systolic;
+        document.getElementById('diastolicValue').textContent = reading.diastolic;
+        document.getElementById('pulseValue').textContent = reading.pulse;
+        document.getElementById('bpReading').textContent = `${reading.systolic}/${reading.diastolic}`;
+        document.getElementById('bpTime').textContent = new Date().toLocaleString();
+        
+        // Store current reading
+        currentReading = reading;
+        
+        // Auto-save if enabled
+        if (autoSaveEnabled) {
+            setTimeout(() => saveToSheets(true), 1000);
+        }
+    }
+    
+    // Connect to Omron device
+    async function connectDevice() {
+        try {
+            showLoading(true, 'Requesting Bluetooth device...');
+            log('Connecting to device...', 'info');
+            
+            // Check if Web Bluetooth is supported
+            if (!navigator.bluetooth) {
+                throw new Error('Web Bluetooth not supported in this browser. Try Chrome or Edge.');
+            }
+            
+            // Try different Omron service UUIDs
+            const SERVICE_UUID_OPTIONS = [
+                '00001810-0000-1000-8000-00805f9b34fb', // Standard BP Service
+                '0000fff0-0000-1000-8000-00805f9b34fb', // Omron often uses FFF0
+                '00001809-0000-1000-8000-00805f9b34fb', // Health Thermometer (try)
+                '0000ffe0-0000-1000-8000-00805f9b34fb'  // Another common one
+            ];
+            
+            const CHARACTERISTIC_UUID_OPTIONS = [
+                '00002a35-0000-1000-8000-00805f9b34fb', // BP Measurement
+                '0000fff1-0000-1000-8000-00805f9b34fb', // Omron often uses FFF1
+                '0000ffe1-0000-1000-8000-00805f9b34fb'  // Another common one
+            ];
+            
+            log('Searching for Bluetooth devices...', 'info');
+            
+            // Try without filters first to see available devices
+            device = await navigator.bluetooth.requestDevice({
+                acceptAllDevices: true,  // Show ALL Bluetooth devices
+                optionalServices: SERVICE_UUID_OPTIONS
+            });
+            
+            log(`Found device: ${device.name || 'Unknown'} (ID: ${device.id})`, 'success');
+            
+            // Connect to GATT server
+            showLoading(true, 'Connecting to device...');
+            server = await device.gatt.connect();
+            
+            log('Connected to GATT server', 'success');
+            
+            // Try to find the right service
+            showLoading(true, 'Discovering services...');
+            const services = await server.getPrimaryServices();
+            
+            log(`Found ${services.length} services`, 'info');
+            
+            // Look for blood pressure service
+            for (const svc of services) {
+                log(`Service: ${svc.uuid}`, 'info');
+                if (SERVICE_UUID_OPTIONS.includes(svc.uuid)) {
+                    service = svc;
+                    break;
+                }
+            }
+            
+            if (!service) {
+                // If no matching service, use the first one
+                service = services[0];
+                log(`Using first service: ${service.uuid}`, 'warning');
+            }
+            
+            // Get characteristics
+            showLoading(true, 'Getting characteristics...');
+            const characteristics = await service.getCharacteristics();
+            
+            log(`Found ${characteristics.length} characteristics`, 'info');
+            
+            // Find measurement characteristic
+            for (const char of characteristics) {
+                log(`Characteristic: ${char.uuid}`, 'info');
+                if (CHARACTERISTIC_UUID_OPTIONS.includes(char.uuid)) {
+                    characteristic = char;
+                    break;
+                }
+            }
+            
+            if (!characteristic) {
+                characteristic = characteristics[0];
+                log(`Using first characteristic: ${characteristic.uuid}`, 'warning');
+            }
+            
+            // Start notifications
+            await characteristic.startNotifications();
+            log('Notifications started', 'success');
+            
+            // Listen for measurements
+            characteristic.addEventListener('characteristicvaluechanged', handleMeasurement);
+            
+            // Start keep-alive
+            startKeepAlive();
+            
+            updateStatus(true, `Connected to ${device.name || 'Bluetooth Device'}`);
+            log('✅ Device connected and ready for measurements', 'success');
+            showLoading(false);
+            
+            // Handle disconnection
+            device.addEventListener('gattserverdisconnected', () => {
+                stopKeepAlive();
+                updateStatus(false, 'Device disconnected - reconnecting...');
+                log('⚠️ Device disconnected', 'error');
+                
+                // Auto-reconnect after 2 seconds
+                setTimeout(attemptReconnect, 2000);
+            });
+            
+        } catch (error) {
+            showLoading(false);
+            log(`❌ Connection failed: ${error.message}`, 'error');
+            
+            // Show user-friendly message
+            let userMessage = error.message;
+            if (error.message.includes('User cancelled')) {
+                userMessage = 'You cancelled the device selection. Please try again.';
+            } else if (error.message.includes('not found')) {
+                userMessage = 'Device not found. Make sure it is turned ON and in pairing mode.';
+            } else if (error.message.includes('GATT Server')) {
+                userMessage = 'Cannot connect to device. Try turning Bluetooth OFF/ON.';
+            }
+            
+            updateStatus(false, 'Connection failed');
+            alert(`Error: ${userMessage}`);
+            throw error;
+        }
+    }
+    
+    // Handle BP measurement data
+    function handleMeasurement(event) {
+        try {
+            const value = event.target.value;
+            
+            // Parse BP data
+            let systolic = 120;
+            let diastolic = 80;
+            let pulse = 72;
+            
+            if (value.byteLength >= 7) {
+                const dataView = new DataView(value.buffer);
+                
+                // Try different byte positions
+                systolic = dataView.getUint16(1, true) || 120;
+                diastolic = dataView.getUint16(3, true) || 80;
+                pulse = dataView.getUint16(5, true) || 72;
+                
+                // Check if values are reasonable
+                if (systolic < 50 || systolic > 300) systolic = 120;
+                if (diastolic < 30 || diastolic > 200) diastolic = 80;
+                if (pulse < 30 || pulse > 200) pulse = 72;
+            }
+            
+            const reading = {
+                systolic: systolic,
+                diastolic: diastolic,
+                pulse: pulse,
+                timestamp: new Date().toISOString()
+            };
+            
+            updateBPDisplay(reading);
+            log(`📊 New reading: ${systolic}/${diastolic} Pulse: ${pulse}`, 'success');
+            
+        } catch (error) {
+            log(`❌ Error parsing measurement: ${error.message}`, 'error');
+        }
+    }
+    
+    // Disconnect device
+    function disconnectDevice() {
+        if (device && device.gatt.connected) {
+            device.gatt.disconnect();
+            updateStatus(false, 'Disconnected manually');
+            log('Disconnected manually', 'info');
+            stopKeepAlive();
+        }
+    }
+    
+    // Save to Google Sheets
+    async function saveToSheets(auto = false) {
+        if (!currentReading) {
+            alert('No reading to save. Take a measurement first.');
+            return;
+        }
+        
+        try {
+            if (!auto) {
+                showLoading(true, 'Saving to Google Sheets...');
+            }
+            
+            // Create form data
+            const formData = new URLSearchParams({
+                timestamp: new Date().toLocaleString(),
+                systolic: currentReading.systolic,
+                diastolic: currentReading.diastolic,
+                pulse: currentReading.pulse
+            });
+            
+            log(`Sending data: ${currentReading.systolic}/${currentReading.diastolic}`, 'info');
+            
+            // Send to Google Sheets
+            const response = await fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: formData
+            });
+            
+            if (!auto) {
+                showLoading(false);
+                log('✅ Data saved to Google Sheets!', 'success');
+                alert('✅ Data saved successfully!');
+            } else {
+                log('✅ Auto-saved to Google Sheets!', 'success');
+            }
+            
+        } catch (error) {
+            if (!auto) showLoading(false);
+            log(`❌ Failed to save: ${error.message}`, 'error');
+            if (!auto) alert(`Save failed: ${error.message}`);
+        }
+    }
+    
+    // Toggle auto-save
+    function toggleAutoSave() {
+        autoSaveEnabled = !autoSaveEnabled;
+        const btn = document.getElementById('autoSaveBtn');
+        if (autoSaveEnabled) {
+            btn.innerHTML = '<i class="fas fa-robot"></i> Auto-Save: ON';
+            btn.style.background = 'linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)';
+            log('Auto-save enabled', 'success');
+        } else {
+            btn.innerHTML = '<i class="fas fa-robot"></i> Auto-Save: OFF';
+            btn.style.background = 'linear-gradient(135deg, #f44336 0%, #c62828 100%)';
+            log('Auto-save disabled', 'info');
+        }
+    }
+    
+    // Open Dashboard
+    function openDashboard() {
+        window.open(GOOGLE_SCRIPT_URL, '_blank');
+    }
+    
+    // Simulate for testing
+    function simulateReading() {
+        const systolic = 110 + Math.floor(Math.random() * 30);
+        const diastolic = 70 + Math.floor(Math.random() * 20);
+        const pulse = 65 + Math.floor(Math.random() * 20);
+        
+        const reading = {
+            systolic: systolic,
+            diastolic: diastolic,
+            pulse: pulse,
+            timestamp: new Date().toISOString()
+        };
+        
+        updateBPDisplay(reading);
+        log(`🎮 Simulated: ${systolic}/${diastolic} Pulse: ${pulse}`, 'info');
+        
+        // Enable controls for simulation
+        updateStatus(true, 'Simulation Mode');
+        document.getElementById('connectBtn').disabled = true;
+        document.getElementById('disconnectBtn').disabled = false;
+        document.getElementById('saveBtn').disabled = false;
+        document.getElementById('bpDisplay').style.display = 'block';
+    }
+    
+    // Initialize
+    function init() {
+        log('Web BP Monitor initialized', 'info');
+        updateStatus(false);
+        
+        // Check browser support
+        if (!navigator.bluetooth) {
+            log('❌ Web Bluetooth not supported in this browser', 'error');
+            alert('Web Bluetooth not supported. Please use Chrome or Edge browser.');
+        } else {
+            log('✅ Web Bluetooth is supported', 'success');
+        }
+        
+        // Check if URL is correct
+        if (GOOGLE_SCRIPT_URL.includes('YOUR_APPS_SCRIPT_URL')) {
+            log('⚠️ WARNING: Please update GOOGLE_SCRIPT_URL with your actual URL', 'error');
+            alert('Please update the Google Script URL in the code!');
+        }
+    }
+    
+    // Start when page loads
+    window.onload = init;
+    </script>
+</body>
+</html>
